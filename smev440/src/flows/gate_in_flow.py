@@ -44,8 +44,13 @@ def get_fns_kwit() -> List[str]:
 
 
 @task(name="Запись в neo4j")
-def write_req_to_neo4j(xml_file: str) -> None:
-    """Write FNS request data to Neo4j database."""
+def write_req_to_neo4j(xml_file: str, client: Neo4jClient) -> None:
+    """Write FNS request data to Neo4j database.
+    
+    Args:
+        xml_file: Name of the XML file to process.
+        client: Shared Neo4jClient instance from flow context.
+    """
     name = xml_file[:-4]
     req_type = xml_file[:3]
 
@@ -60,8 +65,7 @@ def write_req_to_neo4j(xml_file: str) -> None:
 
     logger.info("Writing request %s to Neo4j", xml_file)
 
-    with Neo4jClient() as client:
-        client.create_fns_req_node(data)
+    client.create_fns_req_node(data)
 
     logger.info("Request %s successfully written to Neo4j", xml_file)
 
@@ -75,7 +79,8 @@ def gate_in_flow() -> None:
     
     try:
         # Ensure driver is initialized (lazy initialization happens on first call)
-        get_neo4j_driver()
+        driver = get_neo4j_driver()
+        client = Neo4jClient()
         logger.info("Neo4j connection pool initialized")
 
         fns_req_future = get_fns_req.submit()
@@ -86,7 +91,7 @@ def gate_in_flow() -> None:
 
         if fns_req_list:
             for xml_file in fns_req_list:
-                write_req_to_neo4j(xml_file).result()
+                write_req_to_neo4j(xml_file, client).result()
 
         logger.info("Flow completed. Processed %d FNS requests and %d receipts.",
                     len(fns_req_list), len(fns_kwit_list))
