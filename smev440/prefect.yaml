@@ -1,0 +1,17 @@
+variables:
+  api_url: "{{ $PREFECT_API_URL }}"
+  work_pool_name: smev-fns
+
+work_pools:
+  - name: smev-fns
+    type: process 
+
+deployments:
+  - name: "gate_in_flow"
+    entrypoint: src/flows/gate_in_flow.py:gate_in_flow
+    work_pool:
+      name: smev-fns
+      job_variables:
+        env:
+          PREFECT_API_URL: "{{ $PREFECT_API_URL }}"
+
